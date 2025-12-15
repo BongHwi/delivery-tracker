@@ -4,21 +4,25 @@ import { CarrierRegistry, TrackInfo } from "@delivery-tracker/core";
 import { WebhookRepository } from "../webhook-service/WebhookRepository";
 import { QueueManager, TrackingMonitorJobData } from "../queue/QueueManager";
 import { webhookLogger } from "../logger";
+import { TrackingCache } from "../cache/TrackingCache";
 
 export class TrackingMonitorJob {
   private repository: WebhookRepository;
   private carrierRegistry: CarrierRegistry;
   private queueManager: QueueManager;
+  private cache: TrackingCache;
   private logger = webhookLogger.child({ component: "TrackingMonitorJob" });
 
   constructor(
     repository: WebhookRepository,
     carrierRegistry: CarrierRegistry,
-    queueManager: QueueManager
+    queueManager: QueueManager,
+    cache: TrackingCache
   ) {
     this.repository = repository;
     this.carrierRegistry = carrierRegistry;
     this.queueManager = queueManager;
+    this.cache = cache;
   }
 
   /**
@@ -68,24 +72,43 @@ export class TrackingMonitorJob {
         return;
       }
 
-      // Track the package
-      let trackInfo: TrackInfo;
-      try {
-        trackInfo = await carrier.track({ trackingNumber });
-      } catch (error) {
-        this.logger.warn("Tracking failed (carrier API error)", {
+      // Try to get from cache first
+      let trackInfo: TrackInfo | null = this.cache.get(carrierId, trackingNumber);
+
+      if (trackInfo) {
+        this.logger.debug("Using cached tracking data", {
           webhookId: webhookRegistrationId,
           carrierId,
           trackingNumber,
-          error: (error as Error).message,
         });
+      } else {
+        // Cache miss - fetch from carrier API
+        try {
+          trackInfo = await carrier.track({ trackingNumber });
 
-        // Update last checked time but don't treat as webhook failure
-        await this.repository.updateWebhook(webhookRegistrationId, {
-          lastCheckedAt: new Date(),
-          lastError: `Tracking API error: ${(error as Error).message}`,
-        });
-        return;
+          // Store in cache for future requests
+          this.cache.set(carrierId, trackingNumber, trackInfo);
+
+          this.logger.debug("Fetched fresh tracking data", {
+            webhookId: webhookRegistrationId,
+            carrierId,
+            trackingNumber,
+          });
+        } catch (error) {
+          this.logger.warn("Tracking failed (carrier API error)", {
+            webhookId: webhookRegistrationId,
+            carrierId,
+            trackingNumber,
+            error: (error as Error).message,
+          });
+
+          // Update last checked time but don't treat as webhook failure
+          await this.repository.updateWebhook(webhookRegistrationId, {
+            lastCheckedAt: new Date(),
+            lastError: `Tracking API error: ${(error as Error).message}`,
+          });
+          return;
+        }
       }
 
       // Compute checksum of tracking events

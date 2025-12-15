@@ -6,6 +6,9 @@ export { WebhookValidator, RegisterWebhookInput } from "./webhook-service/Webhoo
 // Queue management exports
 export { QueueManager, RedisConfig, TrackingMonitorJobData, WebhookDeliveryJobData } from "./queue/QueueManager";
 
+// Cache exports
+export { TrackingCache, TrackingCacheConfig } from "./cache/TrackingCache";
+
 // Job exports
 export { TrackingMonitorJob } from "./jobs/TrackingMonitorJob";
 export { WebhookDeliveryJob } from "./jobs/WebhookDeliveryJob";

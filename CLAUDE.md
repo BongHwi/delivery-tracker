@@ -36,6 +36,7 @@ The Dockerfile uses a multi-stage build:
 - **packages/api** - GraphQL API layer that wraps core functionality
 - **packages/cli** - Command-line interface tool
 - **packages/server** - Self-hosted GraphQL HTTP server (Apollo Server)
+- **packages/webhook** - Webhook infrastructure with Redis-backed job queue system (optional)
 
 ## Architecture: Carrier Scrapers
 
@@ -223,6 +224,315 @@ Build process:
 
 The project supports GitHub Codespaces (see README.md). Use the "Run and Debug" section in VSCode to launch `@delivery-tracker/server`.
 
+## Webhook Infrastructure (packages/webhook)
+
+The webhook package provides an optional feature for tracking status change notifications via HTTP callbacks.
+
+### Architecture
+
+**Core Components:**
+- `WebhookService` - Main orchestrator for webhook lifecycle
+- `WebhookRepository` - Prisma-based SQLite database operations
+- `QueueManager` - Bull queue wrapper for Redis job processing
+- `TrackingCache` - In-memory cache for tracking results (reduces carrier API calls)
+- `TrackingMonitorJob` - Periodic tracking checks (1-minute intervals)
+- `WebhookDeliveryJob` - HTTP POST delivery to callback URLs
+- `ExpirationCleanupJob` - Cleanup expired webhooks and cache entries
+
+### Database Schema
+
+```prisma
+model Webhook {
+  id              String   @id @default(uuid())
+  carrierId       String
+  trackingNumber  String
+  callbackUrl     String
+  lastStatusCode  String?
+  expirationTime  DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+```
+
+### Job Queue System
+
+**TrackingMonitorJob** (runs every 60 seconds):
+1. Fetches active webhooks from database
+2. Checks cache for tracking data (5-minute TTL by default)
+3. If cache miss, calls carrier tracking API and stores in cache
+4. Compares current status checksum with last known checksum
+5. If changed, enqueues WebhookDeliveryJob
+6. Updates lastChecksum in database
+
+**WebhookDeliveryJob**:
+- HTTP POST to callback URL with JSON payload
+- Custom headers: `x-webhook-id`, `x-webhook-attempt`
+- Retry logic: 3 attempts with exponential backoff
+- Timeout: 30 seconds per attempt
+
+**ExpirationCleanupJob** (runs every 5 minutes):
+- Deletes webhooks past their expirationTime
+- Cleans up expired cache entries
+
+### Caching System
+
+**TrackingCache** (packages/webhook/src/cache/TrackingCache.ts):
+- In-memory LRU cache for tracking results
+- Default TTL: 5 minutes (configurable)
+- Default max size: 1000 entries (configurable)
+- Automatically evicts oldest entries when full
+- Reduces redundant API calls to carrier services
+
+**Benefits:**
+- Multiple webhooks tracking the same package share cached data
+- Reduces load on carrier APIs (prevents rate limiting/blocking)
+- Faster webhook processing (cache hits skip API calls)
+
+**Configuration:**
+```typescript
+const webhookService = new WebhookService({
+  databaseUrl: "file:./webhook.db",
+  carrierRegistry: registry,
+  queueManager: queueMgr,
+  cache: {
+    ttl: 5 * 60 * 1000,  // 5 minutes
+    maxSize: 1000         // max entries
+  }
+});
+```
+
+**Cache Statistics:**
+```typescript
+const stats = webhookService.getCacheStats();
+// Returns: { totalEntries, validEntries, expiredEntries, maxSize, ttl }
+```
+
+### GraphQL API
+
+```graphql
+mutation RegisterTrackWebhook($input: RegisterTrackWebhookInput!) {
+  registerTrackWebhook(input: $input)
+}
+
+input RegisterTrackWebhookInput {
+  carrierId: ID!
+  trackingNumber: String!
+  callbackUrl: String!
+  expirationTime: DateTime!
+}
+```
+
+Returns a webhook ID (UUID).
+
+### Webhook Payload
+
+```json
+{
+  "webhookId": "uuid-here",
+  "trackingData": {
+    "lastEvent": {
+      "time": "2025-01-15T10:30:00+09:00",
+      "status": { "code": "delivered", "name": null },
+      "description": "Package delivered"
+    },
+    "events": { /* ... */ },
+    "sender": { /* ... */ },
+    "recipient": { /* ... */ }
+  },
+  "metadata": {
+    "carrierId": "kr.cjlogistics",
+    "trackingNumber": "1234567890",
+    "triggeredAt": "2025-01-15T10:31:00Z"
+  }
+}
+```
+
+### Environment Configuration
+
+```bash
+# Enable webhook feature
+ENABLE_WEBHOOKS=true
+
+# SQLite database path
+WEBHOOK_DATABASE_URL=file:./webhook.db
+
+# Redis configuration (required if webhooks enabled)
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=optional
+REDIS_DB=0
+```
+
+### Deployment with Webhooks
+
+**Using Docker Compose (Recommended):**
+```bash
+# Create .env file
+cat > .env << EOF
+ENABLE_WEBHOOKS=true
+PORT=4000
+REDIS_HOST=redis
+REDIS_PORT=6379
+WEBHOOK_DATABASE_URL=file:/data/webhook.db
+EOF
+
+# Start services
+docker compose up -d
+```
+
+**Using Docker:**
+```bash
+# Start Redis
+docker network create delivery-tracker-net
+docker run -d --name redis --network delivery-tracker-net redis:7-alpine
+
+# Start server with webhooks
+docker run -d --name server --network delivery-tracker-net -p 4000:4000 \
+  -e ENABLE_WEBHOOKS=true \
+  -e REDIS_HOST=redis \
+  -e REDIS_PORT=6379 \
+  -e WEBHOOK_DATABASE_URL=file:/data/webhook.db \
+  -v webhook-data:/data \
+  delivery-tracker
+```
+
+### Database Migrations
+
+The `docker-entrypoint.sh` script automatically runs Prisma migrations at container startup:
+
+```bash
+#!/bin/sh
+if [ "$ENABLE_WEBHOOKS" = "true" ]; then
+  cd /app/packages/webhook
+  npx prisma@5.22.0 db push --skip-generate
+  cd /app/packages/server
+fi
+exec "$@"
+```
+
+For development:
+```bash
+cd packages/webhook
+pnpm prisma db push
+pnpm prisma generate
+```
+
+## Test Carrier (dev.track.dummy)
+
+A dummy carrier is available for testing without requiring real tracking numbers.
+
+**Carrier ID:** `dev.track.dummy`
+
+**Valid Tracking Numbers:**
+- `DELIVERED` - Returns a package that was delivered
+- `IN_TRANSIT` - Returns a package currently in transit
+- `OUT_FOR_DELIVERY` - Returns a package out for delivery
+- `EXCEPTION` - Returns a package with an exception
+- `NOT_FOUND` - Throws NotFoundError
+
+**Example Usage:**
+```graphql
+query {
+  track(carrierId: "dev.track.dummy", trackingNumber: "IN_TRANSIT") {
+    lastEvent {
+      status { code }
+      description
+    }
+  }
+}
+```
+
+**Implementation Location:** packages/core/src/carriers/dev.track.dummy/index.ts
+
+The dummy carrier follows the same two-class pattern as real carriers and includes realistic tracking events with proper timestamps, locations, and status codes.
+
+## Docker Deployment
+
+### Using Docker Compose (Recommended)
+
+```bash
+# Clone repository
+git clone https://github.com/shlee322/delivery-tracker.git
+cd delivery-tracker
+
+# Configure environment (optional)
+cp .env.example .env
+# Edit .env to customize PORT, ENABLE_WEBHOOKS, etc.
+
+# Start services
+docker compose up -d
+
+# View logs
+docker compose logs -f server
+
+# Stop services
+docker compose down
+
+# Stop and remove volumes
+docker compose down -v
+
+# Rebuild after code changes
+docker compose up -d --build
+```
+
+### Using Docker
+
+```bash
+# Build image
+docker build -t delivery-tracker .
+
+# Run without webhooks
+docker run -p 4000:4000 delivery-tracker
+
+# Run with webhooks (requires Redis)
+docker network create delivery-tracker-net
+docker run -d --name redis --network delivery-tracker-net redis:7-alpine
+docker run -d --name server --network delivery-tracker-net -p 4000:4000 \
+  -e ENABLE_WEBHOOKS=true \
+  -e REDIS_HOST=redis \
+  -e REDIS_PORT=6379 \
+  -e WEBHOOK_DATABASE_URL=file:/data/webhook.db \
+  delivery-tracker
+```
+
+### Docker Build Details
+
+The multi-stage Dockerfile includes:
+
+1. **Base stage** - Installs pnpm and OpenSSL (required for Prisma)
+   ```dockerfile
+   RUN apk add --no-cache openssl
+   ```
+
+2. **Build stage** - Compiles TypeScript and generates Prisma client
+   ```dockerfile
+   RUN pnpm --filter @delivery-tracker/server build-with-deps
+   ```
+
+3. **Final stage** - Production image with minimal dependencies
+   - Copies package.json files first to establish workspace symlinks
+   - Runs `pnpm install --prod --frozen-lockfile`
+   - Copies built artifacts from build stage
+   - Uses entrypoint script for runtime migrations
+
+### Common Docker Issues
+
+**Issue: Module resolution errors**
+- Cause: Workspace symlinks not created properly
+- Fix: Ensure all package.json files copied before `pnpm install --prod`
+
+**Issue: Prisma version mismatch**
+- Cause: npm installing latest Prisma instead of project version
+- Fix: Pin version explicitly: `npx prisma@5.22.0 generate`
+
+**Issue: OpenSSL missing**
+- Cause: Alpine Linux doesn't include OpenSSL by default
+- Fix: Add `RUN apk add --no-cache openssl` to Dockerfile
+
+**Issue: Database not initialized**
+- Cause: SQLite database doesn't exist at runtime
+- Fix: Entrypoint script runs `prisma db push` on startup
+
 ## Important Notes
 
 - All tracking events must be ordered chronologically (oldest first)
@@ -231,3 +541,6 @@ The project supports GitHub Codespaces (see README.md). Use the "Run and Debug" 
 - Country codes must be ISO 3166-1 alpha-2 (e.g., "KR", "JP", "US")
 - Validate tracking number format at the start of `track()` when possible
 - Event status codes should be as specific as possible (avoid `Unknown` when you can infer the actual status)
+- Webhook feature requires Redis and SQLite, controlled by `ENABLE_WEBHOOKS` environment variable
+- Use `dev.track.dummy` carrier for testing webhook flows without real carrier APIs
+- All required interface fields must be present (status.name, status.carrierSpecificData, location.postalCode, contact, etc.)

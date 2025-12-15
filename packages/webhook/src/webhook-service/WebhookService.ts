@@ -7,23 +7,27 @@ import { WebhookDeliveryJob } from "../jobs/WebhookDeliveryJob";
 import { ExpirationCleanupJob } from "../jobs/ExpirationCleanupJob";
 import { webhookLogger } from "../logger";
 import { WebhookError } from "../errors";
+import { TrackingCache, TrackingCacheConfig } from "../cache/TrackingCache";
 
 export interface WebhookServiceConfig {
   databaseUrl: string;
   carrierRegistry: CarrierRegistry;
   queueManager: QueueManager;
+  cache?: TrackingCacheConfig;
 }
 
 export class WebhookService {
   private repository: WebhookRepository;
   private carrierRegistry: CarrierRegistry;
   private queueManager: QueueManager;
+  private cache: TrackingCache;
   private logger = webhookLogger.child({ component: "WebhookService" });
 
   constructor(config: WebhookServiceConfig) {
     this.repository = new WebhookRepository(config.databaseUrl);
     this.carrierRegistry = config.carrierRegistry;
     this.queueManager = config.queueManager;
+    this.cache = new TrackingCache(config.cache);
   }
 
   async init(): Promise<void> {
@@ -134,6 +138,20 @@ export class WebhookService {
   }
 
   /**
+   * Get cache statistics
+   */
+  getCacheStats() {
+    return this.cache.getStats();
+  }
+
+  /**
+   * Clear cache manually
+   */
+  clearCache(): void {
+    this.cache.clear();
+  }
+
+  /**
    * Set up job processors for all queues
    */
   private setupJobProcessors(): void {
@@ -141,12 +159,16 @@ export class WebhookService {
     const trackingMonitorJob = new TrackingMonitorJob(
       this.repository,
       this.carrierRegistry,
-      this.queueManager
+      this.queueManager,
+      this.cache
     );
 
     const webhookDeliveryJob = new WebhookDeliveryJob(this.repository);
 
-    const expirationCleanupJob = new ExpirationCleanupJob(this.repository);
+    const expirationCleanupJob = new ExpirationCleanupJob(
+      this.repository,
+      this.cache
+    );
 
     // Register processors with queue manager
     this.queueManager.processTrackingMonitor((job) =>
