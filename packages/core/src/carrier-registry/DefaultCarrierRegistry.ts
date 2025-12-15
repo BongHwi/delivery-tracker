@@ -37,6 +37,7 @@ import { CainiaoGlobal } from "../carriers/cn.cainiao.global";
 import { Pantos } from "../carriers/kr.epantos";
 import { LotteGlobal } from "../carriers/kr.lotte.global";
 import { Homepick } from "../carriers/kr.homepick";
+import { DummyCarrier } from "../carriers/dev.track.dummy";
 
 interface DefaultCarrierRegistryConfig {
   carriers: Record<
@@ -54,6 +55,7 @@ class DefaultCarrierRegistry implements CarrierRegistry {
   public async init(): Promise<void> {
     await this.loadConfig();
 
+    await this.register(new DummyCarrier());
     await this.register(new CainiaoGlobal());
     await this.register(new DHL());
     await this.register(new Sagawa());
