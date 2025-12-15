@@ -235,7 +235,7 @@ The webhook package provides an optional feature for tracking status change noti
 - `WebhookRepository` - Prisma-based SQLite database operations
 - `QueueManager` - Bull queue wrapper for Redis job processing
 - `TrackingCache` - In-memory cache for tracking results (reduces carrier API calls)
-- `TrackingMonitorJob` - Periodic tracking checks (1-minute intervals)
+- `TrackingMonitorJob` - Periodic tracking checks (1-hour intervals)
 - `WebhookDeliveryJob` - HTTP POST delivery to callback URLs
 - `ExpirationCleanupJob` - Cleanup expired webhooks and cache entries
 
@@ -256,7 +256,7 @@ model Webhook {
 
 ### Job Queue System
 
-**TrackingMonitorJob** (runs every 60 seconds):
+**TrackingMonitorJob** (runs every 1 hour):
 1. Fetches active webhooks from database
 2. Checks cache for tracking data (5-minute TTL by default)
 3. If cache miss, calls carrier tracking API and stores in cache
@@ -270,7 +270,7 @@ model Webhook {
 - Retry logic: 3 attempts with exponential backoff
 - Timeout: 30 seconds per attempt
 
-**ExpirationCleanupJob** (runs every 5 minutes):
+**ExpirationCleanupJob** (runs every 1 hour):
 - Deletes webhooks past their expirationTime
 - Cleans up expired cache entries
 
@@ -290,13 +290,24 @@ model Webhook {
 
 **Configuration:**
 ```typescript
+// Configure QueueManager with custom tracking interval
+const queueManager = new QueueManager();
+await queueManager.init({
+  redis: {
+    host: "localhost",
+    port: 6379,
+  },
+  trackingMonitorInterval: 60 * 60 * 1000, // 1 hour (default)
+});
+
+// Configure WebhookService with cache settings
 const webhookService = new WebhookService({
   databaseUrl: "file:./webhook.db",
   carrierRegistry: registry,
-  queueManager: queueMgr,
+  queueManager: queueManager,
   cache: {
-    ttl: 5 * 60 * 1000,  // 5 minutes
-    maxSize: 1000         // max entries
+    ttl: 5 * 60 * 1000,  // 5 minutes (default)
+    maxSize: 1000         // max entries (default)
   }
 });
 ```
@@ -361,6 +372,15 @@ REDIS_HOST=localhost
 REDIS_PORT=6379
 REDIS_PASSWORD=optional
 REDIS_DB=0
+
+# Tracking monitor interval in milliseconds (optional, default: 3600000 = 1 hour)
+TRACKING_MONITOR_INTERVAL=3600000
+
+# Cache TTL in milliseconds (optional, default: 300000 = 5 minutes)
+CACHE_TTL=300000
+
+# Cache max size (optional, default: 1000)
+CACHE_MAX_SIZE=1000
 ```
 
 ### Deployment with Webhooks

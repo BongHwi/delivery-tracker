@@ -83,16 +83,29 @@ async function main(): Promise<void> {
 
     const queueManager = new QueueManager();
     await queueManager.init({
-      host: process.env.REDIS_HOST ?? "localhost",
-      port: parseInt(process.env.REDIS_PORT ?? "6379", 10),
-      password: process.env.REDIS_PASSWORD,
-      db: process.env.REDIS_DB ? parseInt(process.env.REDIS_DB, 10) : undefined,
+      redis: {
+        host: process.env.REDIS_HOST ?? "localhost",
+        port: parseInt(process.env.REDIS_PORT ?? "6379", 10),
+        password: process.env.REDIS_PASSWORD,
+        db: process.env.REDIS_DB ? parseInt(process.env.REDIS_DB, 10) : undefined,
+      },
+      trackingMonitorInterval: process.env.TRACKING_MONITOR_INTERVAL
+        ? parseInt(process.env.TRACKING_MONITOR_INTERVAL, 10)
+        : undefined,
     });
 
     webhookService = new WebhookService({
       databaseUrl: process.env.WEBHOOK_DATABASE_URL ?? "file:./webhook.db",
       carrierRegistry,
       queueManager,
+      cache: {
+        ttl: process.env.CACHE_TTL
+          ? parseInt(process.env.CACHE_TTL, 10)
+          : undefined,
+        maxSize: process.env.CACHE_MAX_SIZE
+          ? parseInt(process.env.CACHE_MAX_SIZE, 10)
+          : undefined,
+      },
     });
     await webhookService.init();
 

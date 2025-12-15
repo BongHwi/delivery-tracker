@@ -9,6 +9,14 @@ export interface RedisConfig {
   db?: number;
 }
 
+export interface QueueManagerConfig {
+  redis: RedisConfig;
+  /**
+   * Tracking monitor interval in milliseconds (default: 1 hour)
+   */
+  trackingMonitorInterval?: number;
+}
+
 export interface TrackingMonitorJobData {
   webhookRegistrationId: string;
   carrierId: string;
@@ -27,19 +35,31 @@ export type QueueJobProcessor<T> = (job: Job<T>) => Promise<void>;
 
 export class QueueManager {
   private redisConfig?: RedisConfig;
+  private trackingMonitorInterval: number;
   private trackingMonitorQueue?: Queue<TrackingMonitorJobData>;
   private webhookDeliveryQueue?: Queue<WebhookDeliveryJobData>;
   private expirationCleanupQueue?: Queue<void>;
   private logger = webhookLogger.child({ component: "QueueManager" });
 
-  async init(config: RedisConfig): Promise<void> {
-    this.redisConfig = config;
+  constructor() {
+    this.trackingMonitorInterval = 60 * 60 * 1000; // Default: 1 hour
+  }
+
+  async init(config: RedisConfig | QueueManagerConfig): Promise<void> {
+    // Support both old RedisConfig and new QueueManagerConfig
+    if ('redis' in config) {
+      this.redisConfig = config.redis;
+      this.trackingMonitorInterval = config.trackingMonitorInterval ?? 60 * 60 * 1000;
+    } else {
+      this.redisConfig = config;
+      this.trackingMonitorInterval = 60 * 60 * 1000;
+    }
 
     // Create Bull queues
     this.trackingMonitorQueue = new Bull<TrackingMonitorJobData>(
       "tracking-monitor",
       {
-        redis: config,
+        redis: this.redisConfig,
         defaultJobOptions: {
           attempts: 3,
           backoff: {
@@ -55,7 +75,7 @@ export class QueueManager {
     this.webhookDeliveryQueue = new Bull<WebhookDeliveryJobData>(
       "webhook-delivery",
       {
-        redis: config,
+        redis: this.redisConfig,
         defaultJobOptions: {
           attempts: 4,
           backoff: {
@@ -69,7 +89,7 @@ export class QueueManager {
     );
 
     this.expirationCleanupQueue = new Bull<void>("expiration-cleanup", {
-      redis: config,
+      redis: this.redisConfig,
       defaultJobOptions: {
         attempts: 3,
         backoff: {
@@ -155,7 +175,7 @@ export class QueueManager {
   ): Promise<Job<TrackingMonitorJobData>> {
     return await this.addTrackingMonitorJob(data, {
       repeat: {
-        every: 5 * 60 * 1000, // 5 minutes
+        every: this.trackingMonitorInterval,
       },
     });
   }
