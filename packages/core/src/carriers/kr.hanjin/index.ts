@@ -23,6 +23,7 @@ const carrierLogger = rootLogger.child({
 
 class Hanjin extends Carrier {
   readonly carrierId = "kr.hanjin";
+  readonly name = "Hanjin Express";
 
   public async track(input: CarrierTrackInput): Promise<TrackInfo> {
     return await new HanjinTrackScraper(

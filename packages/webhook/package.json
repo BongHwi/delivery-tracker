@@ -1,0 +1,30 @@
+{
+  "name": "@delivery-tracker/webhook",
+  "private": true,
+  "type": "commonjs",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "prisma generate && tsc -p .",
+    "build-with-deps": "pnpm --filter '@delivery-tracker/core' build-with-deps && pnpm build",
+    "db:migrate": "prisma migrate dev",
+    "db:generate": "prisma generate"
+  },
+  "dependencies": {
+    "@delivery-tracker/core": "workspace:*",
+    "@prisma/client": "^5.8.0",
+    "bull": "^4.12.0",
+    "ioredis": "^5.3.2",
+    "luxon": "^3.4.0",
+    "winston": "^3.8.2",
+    "zod": "^3.21.4",
+    "undici": "^6.3.0"
+  },
+  "devDependencies": {
+    "prisma": "^5.8.0",
+    "@types/luxon": "^3.3.1",
+    "@types/node": "^18.16.0",
+    "typescript": "^5.0.4"
+  }
+}

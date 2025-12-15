@@ -26,6 +26,7 @@ const carrierLogger = rootLogger.child({
 
 class IlyangLogis extends Carrier {
   readonly carrierId = "kr.ilyanglogis";
+  readonly name = "Ilyang Logis";
 
   public async track(input: CarrierTrackInput): Promise<TrackInfo> {
     return await new IlyangLogisTrackScraper(

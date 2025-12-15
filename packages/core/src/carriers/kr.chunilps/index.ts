@@ -21,6 +21,7 @@ const carrierLogger = rootLogger.child({
 
 class Chunilps extends Carrier {
   readonly carrierId = "kr.chunilps";
+  readonly name = "Chunil Express";
 
   public async track(input: CarrierTrackInput): Promise<TrackInfo> {
     return await new ChunilpsTrackScraper(

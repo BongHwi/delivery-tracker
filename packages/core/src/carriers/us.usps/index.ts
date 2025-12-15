@@ -110,6 +110,7 @@ class USPSUpstreamFetcher extends CarrierUpstreamFetcher {
 
 class USPS extends Carrier {
   readonly carrierId = "us.usps";
+  readonly name = "USPS";
   private config: USPSConfig | null = null;
   private uspsUpstreamFetcher: USPSUpstreamFetcher | null = null;
 

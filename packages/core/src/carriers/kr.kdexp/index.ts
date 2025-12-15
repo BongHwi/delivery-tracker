@@ -27,6 +27,7 @@ const carrierLogger = rootLogger.child({
 
 class KyungdongExpress extends Carrier {
   readonly carrierId = "kr.kdexp";
+  readonly name = "Kyungdong Express";
 
   public async track(input: CarrierTrackInput): Promise<TrackInfo> {
     return await new KyungdongExpressTrackScraper(

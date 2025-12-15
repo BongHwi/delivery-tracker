@@ -28,6 +28,7 @@ const carrierLogger = rootLogger.child({
 
 class CJLogistics extends Carrier {
   readonly carrierId = "kr.cjlogistics";
+  readonly name = "CJ Logistics";
 
   public async track(input: CarrierTrackInput): Promise<TrackInfo> {
     return await new CJLogisticsTrackScraper(

@@ -48,6 +48,15 @@ function carrierIdResolver(
   return parent.carrierId;
 }
 
+function carrierNameResolver(
+  parent: Carrier,
+  args: undefined,
+  contextValue: { appContext: AppContext },
+  info: GraphQLResolveInfo
+): string {
+  return parent.name;
+}
+
 const QueryResolvers = {
   carrier: queryCarrierResolver,
   carriers: queryCarriersResolver,
@@ -55,6 +64,7 @@ const QueryResolvers = {
 
 const CarrierResolvers = {
   id: carrierIdResolver,
+  name: carrierNameResolver,
 };
 
 export { QueryResolvers, CarrierResolvers };

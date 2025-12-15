@@ -20,6 +20,7 @@ const carrierLogger = rootLogger.child({
 
 class CainiaoGlobal extends Carrier {
   readonly carrierId = "cn.cainiao.global";
+  readonly name = "Cainiao Global";
 
   public async track(input: CarrierTrackInput): Promise<TrackInfo> {
     return await new CainiaoGlobalTrackScraper(

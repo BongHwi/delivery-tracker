@@ -16,6 +16,7 @@ abstract class Carrier {
 
   public abstract track(input: CarrierTrackInput): Promise<TrackInfo>;
   public abstract get carrierId(): string;
+  public abstract get name(): string;
 }
 
 interface CarrierTrackInput {

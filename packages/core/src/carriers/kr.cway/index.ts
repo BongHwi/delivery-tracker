@@ -23,6 +23,7 @@ const carrierLogger = rootLogger.child({
 
 class Cway extends Carrier {
   readonly carrierId = "kr.cway";
+  readonly name = "CWay Express";
 
   public async track(input: CarrierTrackInput): Promise<TrackInfo> {
     return await new CwayTrackScraper(

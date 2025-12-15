@@ -27,6 +27,7 @@ const carrierLogger = rootLogger.child({
 
 class Daesin extends Carrier {
   readonly carrierId = "kr.daesin";
+  readonly name = "Daesin Logistics";
 
   public async track(input: CarrierTrackInput): Promise<TrackInfo> {
     return await new DaesinTrackScraper(

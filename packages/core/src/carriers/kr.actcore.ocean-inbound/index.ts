@@ -17,6 +17,7 @@ const carrierLogger = rootLogger.child({
 
 class ActcoreOceanInbound extends Carrier {
   readonly carrierId = "kr.actcore.ocean-inbound";
+  readonly name = "Actcore Ocean Inbound";
 
   public async track(input: CarrierTrackInput): Promise<TrackInfo> {
     return await new ActcoreTrackOceanInboundScraper(

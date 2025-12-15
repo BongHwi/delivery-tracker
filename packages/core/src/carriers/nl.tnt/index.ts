@@ -22,6 +22,7 @@ const carrierLogger = rootLogger.child({
 
 class TNT extends Carrier {
   readonly carrierId = "nl.tnt";
+  readonly name = "TNT";
 
   public async track(input: CarrierTrackInput): Promise<TrackInfo> {
     return await new TNTTrackScraper(

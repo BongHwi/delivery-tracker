@@ -38,6 +38,7 @@ interface TransformTimestampInput {
 
 class DHL extends Carrier {
   readonly carrierId = "de.dhl";
+  readonly name = "DHL";
   private config: DHLConfig | null = null;
 
   public async init(

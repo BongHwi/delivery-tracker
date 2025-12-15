@@ -24,6 +24,7 @@ const carrierLogger = rootLogger.child({
 
 class CVSnet extends Carrier {
   readonly carrierId = "kr.cvsnet";
+  readonly name = "CVSnet";
 
   public async track(input: CarrierTrackInput): Promise<TrackInfo> {
     return await new CVSnetTrackScraper(

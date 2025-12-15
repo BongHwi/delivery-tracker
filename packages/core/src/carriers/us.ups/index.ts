@@ -18,6 +18,7 @@ const carrierLogger = rootLogger.child({
 
 class UPS extends Carrier {
   readonly carrierId = "us.ups";
+  readonly name = "UPS";
 
   public async track(input: CarrierTrackInput): Promise<TrackInfo> {
     return await new UPSTrackScraper(

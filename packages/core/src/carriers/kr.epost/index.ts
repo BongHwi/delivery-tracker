@@ -21,6 +21,7 @@ const carrierLogger = rootLogger.child({
 
 class KoreaPost extends Carrier {
   readonly carrierId = "kr.epost";
+  readonly name = "Korea Post";
 
   public async track(input: CarrierTrackInput): Promise<TrackInfo> {
     return await new KoreaPostTrackScraper(

@@ -19,6 +19,10 @@ class CarrierAlias extends Carrier {
     return this.alias;
   }
 
+  get name(): string {
+    return this.carrier.name;
+  }
+
   async track(input: CarrierTrackInput): Promise<TrackInfo> {
     return await this.carrier.track(input);
   }

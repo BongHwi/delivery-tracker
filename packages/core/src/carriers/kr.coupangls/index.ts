@@ -18,6 +18,7 @@ const carrierLogger = rootLogger.child({
 
 class CoupangLogisticsServices extends Carrier {
   readonly carrierId = "kr.coupangls";
+  readonly name = "Coupang Logistics";
 
   public async track(input: CarrierTrackInput): Promise<TrackInfo> {
     return await new CoupangLogisticsServicesScraper(

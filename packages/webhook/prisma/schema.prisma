@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("WEBHOOK_DATABASE_URL")
+}
+
+model WebhookRegistration {
+  id              String   @id @default(uuid())
+  carrierId       String
+  trackingNumber  String
+  callbackUrl     String
+  expirationTime  DateTime
+  createdAt       DateTime @default(now())
+  active          Boolean  @default(true)
+
+  // For change detection
+  lastChecksum    String?
+  lastCheckedAt   DateTime?
+
+  // Metadata
+  deliveryAttempts Int     @default(0)
+  lastDeliveryAt   DateTime?
+  lastError        String?
+
+  @@index([carrierId, trackingNumber])
+  @@index([expirationTime])
+  @@index([active, lastCheckedAt])
+}
+
+model WebhookDeliveryLog {
+  id                    String   @id @default(uuid())
+  webhookRegistrationId String
+  attemptNumber         Int
+  statusCode            Int?
+  success               Boolean
+  errorMessage          String?
+  requestBody           String
+  responseBody          String?
+  deliveredAt           DateTime @default(now())
+
+  @@index([webhookRegistrationId])
+  @@index([deliveredAt])
+}

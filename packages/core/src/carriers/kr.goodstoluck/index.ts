@@ -20,6 +20,7 @@ const carrierLogger = rootLogger.child({
 
 class GoodsToLuck extends Carrier {
   readonly carrierId = "kr.goodstoluck";
+  readonly name = "Goodstoluck";
 
   public async track(input: CarrierTrackInput): Promise<TrackInfo> {
     return await new GoodsToLuckTrackScraper(

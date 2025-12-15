@@ -20,6 +20,7 @@ const carrierLogger = rootLogger.child({
 
 class YongmaLogis extends Carrier {
   readonly carrierId = "kr.yongmalogis";
+  readonly name = "Yongma Logis";
 
   public async track(input: CarrierTrackInput): Promise<TrackInfo> {
     return await new YongmaLogisScraper(

@@ -19,6 +19,7 @@ const carrierLogger = rootLogger.child({
 
 class Kunyoung extends Carrier {
   readonly carrierId = "kr.kunyoung";
+  readonly name = "Kunyoung Express";
 
   public async track(input: CarrierTrackInput): Promise<TrackInfo> {
     return await new KunyoungTrackScraper(

@@ -19,6 +19,7 @@ const carrierLogger = rootLogger.child({
 
 class EMS extends Carrier {
   readonly carrierId = "un.upu.ems";
+  readonly name = "UPU EMS";
 
   public async track(input: CarrierTrackInput): Promise<TrackInfo> {
     return await new EMSTrackScraper(

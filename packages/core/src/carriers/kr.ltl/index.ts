@@ -30,6 +30,7 @@ interface LTLConfig {
 
 class LTL extends Carrier {
   readonly carrierId = "kr.ltl";
+  readonly name = "LTL";
   private config: LTLConfig | null = null;
 
   public async init(

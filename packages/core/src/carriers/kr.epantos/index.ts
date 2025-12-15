@@ -20,6 +20,7 @@ const carrierLogger = rootLogger.child({
 
 class Pantos extends Carrier {
   readonly carrierId = "kr.epantos";
+  readonly name = "Epantos";
 
   public async track(input: CarrierTrackInput): Promise<TrackInfo> {
     return await new PantosTrackScraper(

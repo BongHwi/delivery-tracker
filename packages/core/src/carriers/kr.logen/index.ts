@@ -23,6 +23,7 @@ const carrierLogger = rootLogger.child({
 
 class Logen extends Carrier {
   readonly carrierId = "kr.logen";
+  readonly name = "Logen";
 
   public async track(input: CarrierTrackInput): Promise<TrackInfo> {
     return await new LogenTrackScraper(

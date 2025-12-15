@@ -22,6 +22,7 @@ const carrierLogger = rootLogger.child({
 
 class Sagawa extends Carrier {
   readonly carrierId = "jp.sagawa";
+  readonly name = "Sagawa Express";
 
   public async track(input: CarrierTrackInput): Promise<TrackInfo> {
     return await new SagawaTrackScraper(

@@ -24,6 +24,7 @@ const carrierLogger = rootLogger.child({
 
 class TodayPickup extends Carrier {
   readonly carrierId = "kr.todaypickup";
+  readonly name = "Today Pickup";
 
   public async track(input: CarrierTrackInput): Promise<TrackInfo> {
     return await new TodayPickupTrackScraper(

@@ -22,6 +22,7 @@ const carrierLogger = rootLogger.child({
 
 class Homepick extends Carrier {
   readonly carrierId = "kr.homepick";
+  readonly name = "Homepick";
 
   public async track(input: CarrierTrackInput): Promise<TrackInfo> {
     return await new HomepickTrackScraper(

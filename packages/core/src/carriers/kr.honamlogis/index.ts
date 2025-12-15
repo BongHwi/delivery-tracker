@@ -22,6 +22,7 @@ const carrierLogger = rootLogger.child({
 
 class HonamLogis extends Carrier {
   readonly carrierId = "kr.honamlogis";
+  readonly name = "Honam Logistics";
 
   public async track(input: CarrierTrackInput): Promise<TrackInfo> {
     return await new HonamLogisTrackScraper(

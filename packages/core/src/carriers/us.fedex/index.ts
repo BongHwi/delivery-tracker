@@ -113,6 +113,7 @@ class FedexUpstreamFetcher extends CarrierUpstreamFetcher {
 
 class Fedex extends Carrier {
   readonly carrierId = "us.fedex";
+  readonly name = "FedEx";
   private config: FedexConfig | null = null;
   private fedexUpstreamFetcher: FedexUpstreamFetcher | null = null;
 

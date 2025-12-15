@@ -23,6 +23,7 @@ const carrierLogger = rootLogger.child({
 
 class SLX extends Carrier {
   readonly carrierId = "kr.slx";
+  readonly name = "SLX";
 
   public async track(input: CarrierTrackInput): Promise<TrackInfo> {
     return await new SLXTrackScraper(

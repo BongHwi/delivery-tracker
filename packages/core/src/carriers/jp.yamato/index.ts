@@ -22,6 +22,7 @@ const carrierLogger = rootLogger.child({
 
 class Yamato extends Carrier {
   readonly carrierId = "jp.yamato";
+  readonly name = "Yamato Transport";
 
   public async track(input: CarrierTrackInput): Promise<TrackInfo> {
     return await new YamatoTrackScraper(
