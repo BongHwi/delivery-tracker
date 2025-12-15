@@ -73,8 +73,37 @@ async function main(): Promise<void> {
   const carrierRegistry = new DefaultCarrierRegistry();
   await carrierRegistry.init();
 
+  // Initialize webhook service if enabled
+  let webhookService: any | undefined;
+  if (process.env.ENABLE_WEBHOOKS === "true") {
+    serverRootLogger.info("Initializing webhook service...");
+
+    // Dynamic import to avoid MODULE_NOT_FOUND when webhooks are disabled
+    const { WebhookService, QueueManager } = await import("@delivery-tracker/webhook");
+
+    const queueManager = new QueueManager();
+    await queueManager.init({
+      host: process.env.REDIS_HOST ?? "localhost",
+      port: parseInt(process.env.REDIS_PORT ?? "6379", 10),
+      password: process.env.REDIS_PASSWORD,
+      db: process.env.REDIS_DB ? parseInt(process.env.REDIS_DB, 10) : undefined,
+    });
+
+    webhookService = new WebhookService({
+      databaseUrl: process.env.WEBHOOK_DATABASE_URL ?? "file:./webhook.db",
+      carrierRegistry,
+      queueManager,
+    });
+    await webhookService.init();
+
+    serverRootLogger.info("Webhook service initialized successfully");
+  } else {
+    serverRootLogger.info("Webhook service disabled (ENABLE_WEBHOOKS not set to 'true')");
+  }
+
   const appContext: AppContext = {
     carrierRegistry,
+    webhookService,
   };
 
   const { url } = await startStandaloneServer(server, {

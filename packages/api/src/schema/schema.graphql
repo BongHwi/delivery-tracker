@@ -64,6 +64,53 @@ type Query {
 }
 
 """
+Mutations for modifying data in the tracking system.
+"""
+type Mutation {
+  """
+  Registers a webhook to receive notifications when tracking information changes.
+
+  The webhook will be called via HTTP POST whenever the tracking events are updated.
+  The webhook must respond with a 2xx status code to be considered successful.
+
+  Returns the webhook registration ID if successful.
+  """
+  registerTrackWebhook(
+    """
+    Input parameters for registering a tracking webhook.
+    """
+    input: RegisterTrackWebhookInput!
+  ): String!
+}
+
+"""
+Input parameters for registering a tracking webhook.
+"""
+input RegisterTrackWebhookInput {
+  """
+  The unique identifier of the carrier.
+  """
+  carrierId: ID!
+
+  """
+  The tracking number to monitor.
+  """
+  trackingNumber: String!
+
+  """
+  The URL to call when tracking information changes.
+  Must be a valid HTTP or HTTPS URL.
+  """
+  callbackUrl: String!
+
+  """
+  The expiration time for this webhook registration.
+  Must be between now and 30 days in the future.
+  """
+  expirationTime: DateTime!
+}
+
+"""
 Represents a shipping carrier.
 """
 type Carrier {

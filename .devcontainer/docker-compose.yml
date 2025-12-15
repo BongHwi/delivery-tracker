@@ -5,4 +5,22 @@ services:
       context: .
     volumes:
       - ../..:/workspaces:cached
+    environment:
+      - ENABLE_WEBHOOKS=true
+      - WEBHOOK_DATABASE_URL=file:/workspaces/delivery-tracker/webhook.db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - redis
     command: sleep infinity
+    network_mode: service:redis
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+volumes:
+  redis-data:

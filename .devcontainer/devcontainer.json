@@ -2,10 +2,13 @@
   "dockerComposeFile": "docker-compose.yml",
   "service": "devcontainer",
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
-  "forwardPorts": [4000],
+  "forwardPorts": [3000, 6379],
   "portsAttributes": {
-    "4000": {
-      "label": "api-server"
+    "3000": {
+      "label": "graphql-server"
+    },
+    "6379": {
+      "label": "redis"
     }
   }
 }

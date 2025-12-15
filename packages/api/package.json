@@ -8,10 +8,11 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "graphql-codegen && tsc -p . && cp src/schema/schema.graphql dist/schema/schema.graphql",
-    "build-with-deps": "pnpm --filter '@delivery-tracker/core' build-with-deps && pnpm build"
+    "build-with-deps": "pnpm --filter '@delivery-tracker/core' build-with-deps && pnpm --filter '@delivery-tracker/webhook' build-with-deps && pnpm build"
   },
   "dependencies": {
     "@delivery-tracker/core": "workspace:*",
+    "@delivery-tracker/webhook": "workspace:*",
     "graphql": "^16.6.0",
     "winston": "^3.8.2"
   },

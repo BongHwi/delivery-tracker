@@ -14,6 +14,7 @@
     "@apollo/server": "^4.7.0",
     "@delivery-tracker/api": "workspace:*",
     "@delivery-tracker/core": "workspace:*",
+    "@delivery-tracker/webhook": "workspace:*",
     "luxon": "^3.4.0",
     "winston": "^3.8.2"
   },
