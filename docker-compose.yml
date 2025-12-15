@@ -1,42 +1,57 @@
-version: '3.8'
-
 services:
   server:
     build: .
+    image: delivery-tracker:latest
+    container_name: delivery-tracker-server
     ports:
-      - "3000:3000"
+      - "${PORT:-4000}:4000"
     environment:
       - NODE_ENV=production
-      - ENABLE_WEBHOOKS=false
+      - ENABLE_WEBHOOKS=${ENABLE_WEBHOOKS:-false}
       - WEBHOOK_DATABASE_URL=file:/data/webhook.db
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - REDIS_DB=${REDIS_DB:-0}
     volumes:
       - webhook-data:/data
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+    networks:
+      - delivery-tracker
+    labels:
+      - "com.delivery-tracker.service=server"
+      - "com.delivery-tracker.version=1.0"
 
   redis:
     image: redis:7-alpine
-    command: redis-server --appendonly yes
+    container_name: delivery-tracker-redis
+    command: redis-server --appendonly yes ${REDIS_PASSWORD:+--requirepass $REDIS_PASSWORD}
     volumes:
       - redis-data:/data
     restart: unless-stopped
+    networks:
+      - delivery-tracker
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 3s
       retries: 3
+      start_period: 10s
+    labels:
+      - "com.delivery-tracker.service=redis"
+
+networks:
+  delivery-tracker:
+    driver: bridge
+    name: delivery-tracker-network
 
 volumes:
   webhook-data:
     driver: local
+    name: delivery-tracker-webhook-data
   redis-data:
     driver: local
+    name: delivery-tracker-redis-data
