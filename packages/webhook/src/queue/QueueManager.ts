@@ -105,8 +105,8 @@ export class QueueManager {
     this.setupErrorHandlers();
 
     this.logger.info("Queue manager initialized", {
-      host: config.host,
-      port: config.port,
+      host: this.redisConfig.host,
+      port: this.redisConfig.port,
     });
   }
 
